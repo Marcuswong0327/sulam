@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KUL City Walk - Area 1</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <link rel="stylesheet" href="cosmetic.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- SIDEBAR (overlay) -->
+    <aside id="sidebar" class="sidebar" aria-hidden="false">
+      <div class="sidebar-header">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;width:100%;">
+          <h3 style="margin:0; font-size:16px;">KUL City Walk — Area 1</h3>
+          <button id="closeSidebarBtn" class="close-sidebar" aria-label="Close sidebar">&times;</button>
+        </div>
+        <input id="poiSearch" type="search" placeholder="Search POIs or Zones..." aria-label="Search POIs" />
+      </div>
+
+      <div class="sidebar-section">
+        <h4>Points of Interest</h4>
+        <ul id="markerList" class="list"></ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>Zones</h4>
+        <ul id="zoneList" class="list"></ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="fitAllBtn" class="btn">Overview</button>
+        <button id="copyMapLink" class="btn">Copy map link</button>
+      </div>
+    </aside>
+
+    <!-- Header above map -->
+    <div id="mapHeader" class="map-header">
+      <h2>KUL City Walk — Area 1</h2>
+      <div class="header-controls">
+        <button id="fitAllBtnTop" class="btn small">Overview</button>
+      </div>
+    </div>
+
+    <!-- Map area -->
+    <main class="map-area">
+      <!-- Desktop map -->
+      <div id="map-desktop" class="map-container" aria-hidden="true"></div>
+      <!-- Mobile map -->
+      <div id="map-mobile" class="map-container" aria-hidden="true"></div>
+
+      <!-- Floating list button for mobile -->
+      <button id="openListBtn" class="fab" aria-label="Open POI list">List</button>
+    </main>
+
+    <!-- Footer below map -->
+    <div id="mapFooter" class="map-footer">
+      <span id="selectedInfo">Select a POI or Zone to see details</span>
+      <span class="footer-credits">© 2025 KUL City Walk Map</span>
+    </div>
+
+  </div>
+
+  <!-- Shared modal -->
+  <div id="poiModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button id="closeModal" class="close" aria-label="Close">&times;</button>
+      <h2 id="modalTitle"></h2>
+      <img id="modalImage" src="" alt="">
+      <p id="modalDesc"></p>
+      <div class="modal-actions">
+        <button id="modalShare" class="btn">Copy link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>
