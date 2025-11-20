@@ -1,5 +1,3 @@
-// script.js (patched)
-
 // Grab footer element
 const selectedInfoEl = document.getElementById('selectedInfo');
 const fitAllBtnTop = document.getElementById('fitAllBtnTop');
@@ -77,30 +75,19 @@ modalShareBtn.addEventListener('click', () => {
   const id = poiModal._current.id || poiModal._current.title;
   const hash = `#poi=${encodeURIComponent(id)}`;
   const url = location.origin + location.pathname + hash;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => {
-      modalShareBtn.textContent = 'Link copied';
-      setTimeout(()=> modalShareBtn.textContent = 'Copy link', 1400);
-    }).catch(() => {
-      alert('Copy failed — use URL + ' + hash);
-    });
-  } else {
-    // fallback
-    prompt('Copy this link:', url);
-  }
+  navigator.clipboard?.writeText(url).then(() => {
+    modalShareBtn.textContent = 'Link copied';
+    setTimeout(()=> modalShareBtn.textContent = 'Copy link', 1400);
+  }).catch(()=> alert('Copy failed — use URL + ' + hash));
 });
 
 // copy map link
 copyMapLinkBtn.addEventListener('click', () => {
   const url = location.origin + location.pathname;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => {
-      copyMapLinkBtn.textContent = 'Copied';
-      setTimeout(()=> copyMapLinkBtn.textContent = 'Copy map link', 1400);
-    }).catch(()=> alert('Copy failed'));
-  } else {
-    prompt('Copy map link:', url);
-  }
+  navigator.clipboard?.writeText(url).then(() => {
+    copyMapLinkBtn.textContent = 'Copied';
+    setTimeout(()=> copyMapLinkBtn.textContent = 'Copy map link', 1400);
+  });
 });
 
 // fit all
@@ -158,26 +145,20 @@ function createImageMap(containerId, options = {}) {
 
   // Markers
   markerLayerRefs = [];
-  // create a fresh cluster group only if requested
-  if (options.useClustering) {
-    markerClusterGroup = L.markerClusterGroup();
+  if (options.useClustering === false) {
+    markersData.forEach((p) => {
+      const m = L.marker(p.coords).addTo(map);
+      m.on('click', () => { showModal(p); setHashForObject(p.id); });
+      markerLayerRefs.push({ id: p.id, marker: m, data: p });
+    });
   } else {
-    markerClusterGroup = null;
-  }
-
-  markersData.forEach((p) => {
-    const m = L.marker(p.coords);
-    m.on('click', () => { showModal(p); setHashForObject(p.id); });
-    markerLayerRefs.push({ id: p.id, marker: m, data: p });
-
-    if (markerClusterGroup) {
+    markerClusterGroup = L.markerClusterGroup();
+    markersData.forEach((p) => {
+      const m = L.marker(p.coords);
+      m.on('click', () => { showModal(p); setHashForObject(p.id); });
       markerClusterGroup.addLayer(m);
-    } else {
-      m.addTo(map);
-    }
-  });
-
-  if (markerClusterGroup) {
+      markerLayerRefs.push({ id: p.id, marker: m, data: p });
+    });
     map.addLayer(markerClusterGroup);
   }
 
@@ -191,48 +172,12 @@ function createImageMap(containerId, options = {}) {
   return map;
 }
 
-// helper: focus on marker (works both with and without clustering)
-function focusOnMarker(ref, data) {
-  if (!activeMap) return;
-  if (markerClusterGroup) {
-    // ensure marker is visible inside cluster then zoom to it
-    markerClusterGroup.zoomToShowLayer(ref.marker, () => {
-      activeMap.setView(data.coords, Math.max(activeMap.getZoom(), activeMap.getMinZoom()));
-      showModal(data);
-    });
-  } else {
-    // clustering disabled - marker is directly on map
-    try {
-      activeMap.setView(data.coords, Math.max(activeMap.getZoom(), activeMap.getMinZoom()));
-    } catch(e){}
-    showModal(data);
-  }
-}
-
-// helper: update marker visibility when search is used (works for both modes)
-function updateMarkerVisibility(predicateFn) {
-  if (markerClusterGroup) {
-    markerClusterGroup.clearLayers();
-    markerLayerRefs.forEach(ref => {
-      if (predicateFn(ref)) markerClusterGroup.addLayer(ref.marker);
-    });
-  } else {
-    markerLayerRefs.forEach(ref => {
-      if (predicateFn(ref)) {
-        if (!activeMap.hasLayer(ref.marker)) activeMap.addLayer(ref.marker);
-      } else {
-        if (activeMap.hasLayer(ref.marker)) activeMap.removeLayer(ref.marker);
-      }
-    });
-  }
-}
-
 // ---------- INIT DESKTOP / MOBILE ----------
 const mq = window.matchMedia('(max-width:768px)');
 
 function initDesktop() {
   sidebarEl.classList.remove('open');
-  sidebarEl.classList.remove('hidden');
+  sidebarEl.classList.remove('hidden'); 
   document.getElementById('map-desktop').style.display = 'block';
   document.getElementById('map-mobile').style.display = 'none';
   openListBtn.style.display = 'none';
@@ -245,7 +190,7 @@ function initDesktop() {
 
 function initMobile() {
   sidebarEl.classList.remove('hidden');
-  sidebarEl.classList.remove('open');
+  sidebarEl.classList.remove('open'); 
   document.getElementById('map-desktop').style.display = 'none';
   document.getElementById('map-mobile').style.display = 'block';
   openListBtn.style.display = 'block';
@@ -288,32 +233,38 @@ function populateSidebar() {
     `;
     markerListEl.appendChild(li);
 
-    const ref = () => markerLayerRefs.find(r => r.id === p.id);
-
     li.querySelector('[data-action="goto"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      const r = ref();
-      if (r) focusOnMarker(r, p);
+      const ref = markerLayerRefs.find(r => r.id === p.id);
+      if (ref) {
+        markerClusterGroup.zoomToShowLayer(ref.marker, () => {
+          activeMap.setView(p.coords, Math.max(activeMap.getZoom(), activeMap.getMinZoom()));
+          showModal(p);
+          setHashForObject(p.id);
+        });
+      }
     });
     li.querySelector('[data-action="share"]').addEventListener('click', (e) => {
       e.stopPropagation();
       const hash = `#poi=${encodeURIComponent(p.id)}`;
       const url = location.origin + location.pathname + hash;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(()=> {
-          const btn = e.currentTarget;
-          const old = btn.textContent;
-          btn.textContent = 'Copied';
-          setTimeout(()=> btn.textContent = old, 1400);
-        }).catch(()=> alert('Copy failed'));
-      } else {
-        prompt('Copy this link:', url);
-      }
+      navigator.clipboard?.writeText(url).then(()=> {
+        const btn = e.currentTarget;
+        const old = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(()=> btn.textContent = old, 1400);
+      });
     });
 
     li.addEventListener('click', () => {
-      const r = ref();
-      if (r) focusOnMarker(r, p);
+      const ref = markerLayerRefs.find(r => r.id === p.id);
+      if (ref) {
+        markerClusterGroup.zoomToShowLayer(ref.marker, () => {
+          activeMap.setView(p.coords, Math.max(activeMap.getZoom(), activeMap.getMinZoom()));
+          showModal(p);
+          setHashForObject(p.id);
+        });
+      }
     });
   });
 
@@ -337,7 +288,6 @@ function populateSidebar() {
 
     li.querySelector('[data-action="goto"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!activeMap) return;
       const poly = L.polygon(z.coords);
       activeMap.fitBounds(poly.getBounds());
       showModal(z);
@@ -348,20 +298,15 @@ function populateSidebar() {
       e.stopPropagation();
       const hash = `#poi=${encodeURIComponent(z.id)}`;
       const url = location.origin + location.pathname + hash;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(()=> {
-          const btn = e.currentTarget;
-          const old = btn.textContent;
-          btn.textContent = 'Copied';
-          setTimeout(()=> btn.textContent = old, 1400);
-        }).catch(()=> alert('Copy failed'));
-      } else {
-        prompt('Copy this link:', url);
-      }
+      navigator.clipboard?.writeText(url).then(()=> {
+        const btn = e.currentTarget;
+        const old = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(()=> btn.textContent = old, 1400);
+      });
     });
 
     li.addEventListener('click', () => {
-      if (!activeMap) return;
       const poly = L.polygon(z.coords);
       activeMap.fitBounds(poly.getBounds());
       showModal(z);
@@ -382,12 +327,12 @@ poiSearchEl.addEventListener('input', () => {
     li.style.display = title.includes(q) ? '' : 'none';
   });
 
-  // filter markers on the map (now works with or without clustering)
-  updateMarkerVisibility(ref => {
-    if (!q) return true;
-    const t = (ref.data.title || '').toLowerCase();
-    const d = (ref.data.desc || '').toLowerCase();
-    return t.includes(q) || d.includes(q);
+  // filter markers on the map
+  markerClusterGroup.clearLayers();
+  markerLayerRefs.forEach(ref => {
+    if (!q || ref.data.title.toLowerCase().includes(q) || (ref.data.desc || '').toLowerCase().includes(q)) {
+      markerClusterGroup.addLayer(ref.marker);
+    }
   });
 });
 
@@ -405,7 +350,10 @@ function openFromHash() {
     if (m) {
       const ref = markerLayerRefs.find(r => r.id === m.id);
       if (ref) {
-        focusOnMarker(ref, m);
+        markerClusterGroup.zoomToShowLayer(ref.marker, () => {
+          activeMap.setView(m.coords, Math.max(activeMap.getZoom(), activeMap.getMinZoom()));
+          showModal(m);
+        });
       }
       return;
     }
@@ -461,8 +409,8 @@ function startTrackingUser() {
           title: "You Are Here",
           icon: L.icon({
             iconUrl: 'you_icon.jpg', // small icon to represent user
-            iconSize: [48, 48],
-            iconAnchor: [24, 48] // center bottom (within bounds)
+            iconSize: [64, 64],
+            iconAnchor: [64, 128] // x=center, y=bottom
           })
         }).addTo(activeMap);
       } else {
@@ -476,3 +424,4 @@ function startTrackingUser() {
 
 // start tracking a short while after map loads
 setTimeout(()=> startTrackingUser(), 800);
+
