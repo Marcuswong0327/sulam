@@ -263,6 +263,12 @@ poiSearchEl.addEventListener('input', () => {
 window.addEventListener('DOMContentLoaded', () => {
   initMaps();
   startListeners();
+
+  const fitAllBtnTop = document.getElementById('fitAllBtnTop');
+  fitAllBtnTop.addEventListener('click', () => {
+    activeMapDesktop.fitBounds([[0, 0], [IMG_H, IMG_W]]);
+    activeMapMobile.fitBounds([[0, 0], [IMG_H, IMG_W]]);
+  });
 });
 
 const sidebarEl = document.getElementById('sidebar');
@@ -277,3 +283,9 @@ document.addEventListener('click', (e) => {
     sidebarEl.classList.remove('open');
   }
 });
+
+const adminBtn = document.getElementById('adminBtn');
+adminBtn.addEventListener('click', () => {
+  window.location.href = 'login.html';
+});
+

@@ -1,85 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Admin Panel</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="admin.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+    }
 
-    .panel {
-      max-width: 450px;
-      margin: auto;
+    #sidebar {
+      width: 320px;
       padding: 20px;
-      border-radius: 14px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      background: #fff;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
     }
 
-    select, input, textarea, button {
+    #map {
+      flex: 1;
+      height: 100vh;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
       width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
+      margin-bottom: 10px;
+      padding: 6px;
+      box-sizing: border-box;
     }
 
-    button {
-      background: #222;
-      color: #fff;
-      cursor: pointer;
+    #coords-list {
+      height: 100px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 4px;
     }
 
-    h2 { text-align: center; }
+    .hidden {
+      display: none;
+    }
+
+    .muted {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    #confirmArea {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    #confirmArea button {
+      flex: 1;
+      padding: 8px;
+    }
+
+    #statusMsg {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #111;
+      min-height: 18px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+      display: block;
+    }
   </style>
 </head>
 
 <body>
-
-  <div class="panel">
+  <div id="sidebar">
     <h2>Admin Panel</h2>
 
-    <!-- MODE SWITCH: Add / Edit / Delete -->
-    <label>Mode:</label>
-    <select id="modeSelect">
-      <option value="add">Add New POI / Zone</option>
-      <option value="edit">Edit Existing</option>
-      <option value="delete">Delete Existing</option>
+    <label for="actionSelect">Action</label>
+    <select id="actionSelect">
+      <option value="">-- Select --</option>
+      <option value="add">Add</option>
+      <option value="edit">Edit</option>
+      <option value="remove">Remove</option>
     </select>
 
-    <!-- DROPDOWN OF EXISTING ITEMS -->
-    <label>Choose Existing Item:</label>
-    <select id="existingSelect">
-      <option value="">-- None Selected --</option>
-    </select>
-
-    <label>Name</label>
-    <input type="text" id="itemName">
-
-    <label>Description</label>
-    <textarea id="itemDesc"></textarea>
-
-    <label>Latitude</label>
-    <input type="number" id="itemLat">
-
-    <label>Longitude</label>
-    <input type="number" id="itemLng">
-
-    <label>Type</label>
-    <select id="itemType">
+    <label for="typeSelect">Content Type</label>
+    <select id="typeSelect">
+      <option value="">-- Select --</option>
       <option value="poi">POI</option>
       <option value="zone">Zone</option>
     </select>
 
-    <label>Upload Image (Optional)</label>
-    <input type="file" id="itemImage" accept="image/*">
+    <div id="existingContainer" class="hidden">
+      <label for="existingSelect">Existing Items</label>
+      <select id="existingSelect"></select>
+    </div>
 
-    <button id="submitBtn">Submit</button>
+    <div id="formContainer" class="hidden">
+      <label for="titleInput">Title</label>
+      <input type="text" id="titleInput">
+
+      <label for="descInput">Description</label>
+      <textarea id="descInput"></textarea>
+
+      <label for="poiImage">Upload Image</label>
+      <input type="file" id="poiImage" accept="image/*">
+      <img id="previewImage" src="" alt="Preview" style="max-width:200px; display:none; margin-bottom:8px;">
+
+      <div id="coordsInputs">
+        <label>Coordinates</label>
+        <input type="text" id="xInput" placeholder="x (pixel) — latitude-like">
+        <input type="text" id="yInput" placeholder="y (pixel) — longitude-like">
+        <div id="coords-list" class="hidden"></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+        <button id="resetCoordsBtn" type="button" style="flex:1;">Reset coords</button>
+      </div>
+    </div>
+
+    <!-- GLOBAL confirm/cancel area (always outside form) -->
+    <div id="confirmArea" class="hidden">
+      <button id="confirmGlobalBtn">Confirm</button>
+      <button id="cancelGlobalBtn" type="button">Cancel</button>
+    </div>
+
+    <div id="statusMsg"></div>
+    <button id="logoutBtn">Logout</button>
   </div>
 
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module" src="admin.js"></script>
 </body>
+
 </html>
