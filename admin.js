@@ -263,17 +263,71 @@ if (resetCoordsBtn) {
   });
 }
 
-// File input preview (don't auto-save large blobs to Firestore in production)
+// ---------------- FILE INPUT PREVIEW + COMPRESSION ----------------
 if (imgFileInput) {
-  imgFileInput.addEventListener('change', (e) => {
+  imgFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (!file) { previewImage.style.display = 'none'; previewDataURL = ''; return; }
-    const reader = new FileReader();
-    reader.onload = function (ev) {
-      previewDataURL = ev.target.result; // dataURL (may be large!)
+    if (!file) { 
+      previewImage.style.display = 'none'; 
+      previewDataURL = ''; 
+      return; 
+    }
+
+    try {
+      previewDataURL = await compressImage(file, 1024, 0.7); // resize + compress
       previewImage.src = previewDataURL;
       previewImage.style.display = 'block';
+    } catch (err) {
+      console.error("Image processing error:", err);
+      alert("Failed to process image. Try a smaller file.");
+      previewImage.style.display = 'none';
+      previewDataURL = '';
+    }
+  });
+}
+
+// ---------------- HELPER FUNCTION: COMPRESS IMAGE ----------------
+function compressImage(file, maxSize = 1024, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target.result;
     };
+    reader.onerror = reject;
+
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      // proportional resize
+      if (width > height && width > maxSize) {
+        height *= maxSize / width;
+        width = maxSize;
+      } else if (height > width && height > maxSize) {
+        width *= maxSize / height;
+        height = maxSize;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          const reader2 = new FileReader();
+          reader2.onload = () => resolve(reader2.result);
+          reader2.onerror = reject;
+          reader2.readAsDataURL(blob);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
     reader.readAsDataURL(file);
   });
 }
