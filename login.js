@@ -22,6 +22,12 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
 
+//return to map button
+const backToMap = document.getElementById('backToMap');
+backToMap.addEventListener("click", function () {
+  window.location.href = "index.html";
+});
+
 //submit
 const login = document.getElementById('loginBtn');
 login.addEventListener("click", function (event) {
