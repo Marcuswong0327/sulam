@@ -303,8 +303,8 @@ function trackUser() {
   }
 
   navigator.geolocation.watchPosition((position) => {
-    const lat = 2.981715850266761;
-    const lng = 101.51101598673462;
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
 
     const coords = latLngToPixel(lat, lng); // convert GPS → map pixel
 
