@@ -52,8 +52,8 @@ let youMarkerDesktop = null;
 let youMarkerMobile = null;
 
 const mapBoundsGPS = {
-  topLeft: { lat: 3.0000, lng: 101.5000 },   // adjust to your actual map latitude
-  bottomRight: { lat: 2.9600, lng: 101.5400 }    // adjust to your actual map longitude
+  topLeft: { lat: 2.9817734396960933, lng: 101.5108517014077 },   // adjust to your actual map latitude
+  bottomRight: { lat: 2.981656921540031, lng: 101.51112863952406 }    // adjust to your actual map longitude
 };
 
 function latLngToPixel(lat, lng) {
@@ -303,8 +303,8 @@ function trackUser() {
   }
 
   navigator.geolocation.watchPosition((position) => {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
+    const lat = 2.981715850266761;
+    const lng = 101.51101598673462;
 
     const coords = latLngToPixel(lat, lng); // convert GPS → map pixel
 
