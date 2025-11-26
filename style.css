@@ -161,6 +161,10 @@ body {
 
 .btn.secondary {
   background: #666;
+}
+
+.btn.secondary2 {
+  background: #666;
   margin-bottom: 12px;
 }
 
