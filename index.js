@@ -76,7 +76,7 @@ modalShareBtn.addEventListener('click', () => {
 // ---------------- MAP INIT ----------------
 function initMaps() {
   // Desktop
-  activeMapDesktop = L.map('map-desktop', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 3, zoomControl: true, attributionControl: false });
+  activeMapDesktop = L.map('map-desktop', { crs: L.CRS.Simple, minZoom: -1, maxZoom: 3, zoomControl: true, attributionControl: false, maxBounds: bounds, maxBoundsViscosity: 0.8 });
   L.imageOverlay(IMAGE_FILENAME, bounds).addTo(activeMapDesktop);
   activeMapDesktop.fitBounds(bounds);
   markerClusterGroupDesktop = L.markerClusterGroup();
@@ -105,31 +105,40 @@ const zonesCol = collection(db, 'zones');
 function startListeners() {
   // POIs
   onSnapshot(poisCol, snapshot => {
-    // remove old markers
+    // Remove old markers directly from maps
     poiMarkers.forEach(m => {
-      markerClusterGroupDesktop.removeLayer(m.desktop);
-      markerClusterGroupMobile.removeLayer(m.mobile);
+      activeMapDesktop.removeLayer(m.desktop);
+      activeMapMobile.removeLayer(m.mobile);
     });
     poiMarkers = [];
 
     snapshot.forEach(doc => {
       const d = doc.data();
-      const lat = Number(d.coords.x);
-      const lng = Number(d.coords.y);
+      const lat = Number(d.coords?.x);
+      const lng = Number(d.coords?.y);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const markerDesktop = L.marker([lat, lng]).on('click', () => showModal({ id: doc.id, title: d.title, desc: d.desc, img: d.img }));
-      const markerMobile = L.marker([lat, lng]).on('click', () => showModal({ id: doc.id, title: d.title, desc: d.desc, img: d.img }));
+      const markerDesktop = L.marker([lat, lng])
+        .on('click', () => showModal({ id: doc.id, title: d.title, desc: d.desc, img: d.img }));
 
+      const markerMobile = L.marker([lat, lng])
+        .on('click', () => showModal({ id: doc.id, title: d.title, desc: d.desc, img: d.img }));
+
+      // Add markers straight to maps (NO CLUSTERING)
       markerDesktop.addTo(activeMapDesktop);
       markerMobile.addTo(activeMapMobile);
 
-
-      poiMarkers.push({ id: doc.id, desktop: markerDesktop, mobile: markerMobile, data: d });
+      poiMarkers.push({
+        id: doc.id,
+        desktop: markerDesktop,
+        mobile: markerMobile,
+        data: d
+      });
     });
 
     populatePOIsSidebar(snapshot.docs);
   });
+
 
   // Zones
   onSnapshot(zonesCol, snapshot => {
@@ -272,20 +281,70 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 const sidebarEl = document.getElementById('sidebar');
-const listBtn = document.getElementById('openListBtn');
-
-listBtn.addEventListener('click', () => {
-  sidebarEl.classList.toggle('open');
-});
-// Close sidebar when clicking outside (mobile)
-document.addEventListener('click', (e) => {
-  if (!sidebarEl.contains(e.target) && !listBtn.contains(e.target)) {
-    sidebarEl.classList.remove('open');
-  }
-});
 
 const adminBtn = document.getElementById('adminBtn');
 adminBtn.addEventListener('click', () => {
   window.location.href = 'login.html';
+});
+
+// Sidebar toggle helpers (mobile uses .open, desktop uses .hidden)
+function isMobileWidth() {
+  return window.matchMedia('(max-width:900px)').matches;
+}
+
+function openSidebarForMobile() {
+  sidebarEl.classList.add('open');
+  sidebarEl.classList.remove('hidden');
+  setTimeout(() => { activeMapDesktop && activeMapDesktop.invalidateSize(); activeMapMobile && activeMapMobile.invalidateSize(); }, 260);
+}
+function closeSidebarForMobile() {
+  sidebarEl.classList.remove('open');
+  // keep hidden class handled by CSS for desktop
+  setTimeout(() => { activeMapDesktop && activeMapDesktop.invalidateSize(); activeMapMobile && activeMapMobile.invalidateSize(); }, 260);
+}
+function toggleSidebar() {
+  if (isMobileWidth()) {
+    // mobile: toggle open/closed
+    if (sidebarEl.classList.contains('open')) closeSidebarForMobile(); else openSidebarForMobile();
+  } else {
+    // desktop: toggle hidden/visible
+    sidebarEl.classList.toggle('hidden');
+    // ensure .open isn't stuck
+    sidebarEl.classList.remove('open');
+    setTimeout(() => { activeMapDesktop && activeMapDesktop.invalidateSize(); activeMapMobile && activeMapMobile.invalidateSize(); }, 260);
+  }
+}
+
+// Hook existing elements (safe no-op if element missing)
+const toggleDesktopBtn = document.getElementById('toggleSidebarBtn');
+const openListBtnEl = document.getElementById('openListBtn');
+const closeSidebarBtnEl = document.getElementById('closeSidebarBtn');
+
+// wire desktop toggle button
+if (toggleDesktopBtn) toggleDesktopBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+
+// wire the floating mobile button (already existed) — reuse same toggle
+if (openListBtnEl) openListBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+
+// make the X (close) button close in both modes
+if (closeSidebarBtnEl) closeSidebarBtnEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (isMobileWidth()) closeSidebarForMobile();
+  else sidebarEl.classList.add('hidden');
+});
+
+// Close sidebar when clicking outside (only collapse mobile; desktop remains)
+document.addEventListener('click', (e) => {
+  if (!sidebarEl.contains(e.target) && !openListBtnEl?.contains(e.target) && !toggleDesktopBtn?.contains(e.target)) {
+    if (isMobileWidth()) closeSidebarForMobile();
+  }
+});
+
+// Keep layout consistent when resizing: if resize from mobile->desktop, ensure classes set correctly
+window.addEventListener('resize', () => {
+  if (!isMobileWidth()) {
+    // ensure mobile open state is removed when switching to desktop
+    sidebarEl.classList.remove('open');
+  }
 });
 

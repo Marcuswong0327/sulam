@@ -194,10 +194,10 @@ body {
   /* keep map background white */
 }
 
-/* Desktop map fixed size */
+/* Desktop map responsive */
 #map-desktop {
-  width: 1530px fit-content;
-  height: 1050px fit-content;
+  max-width: 765px;
+  max-height: 525px;
   margin: auto;
 }
 
@@ -223,6 +223,22 @@ body {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
   display: none;
 }
+
+/* hide mobile list button by default; shown only on narrow screens */
+#openListBtn { display: none; }
+
+/* small desktop toggle (hidden on small screens) */
+#toggleSidebarBtn {
+  display: inline-block;
+  margin-left: 8px;
+}
+
+/* show mobile floating button only on narrow viewports */
+@media (max-width: 900px) {
+  #openListBtn { display: block; }
+  #toggleSidebarBtn { display: none; } /* hide desktop toggle on mobile */
+}
+
 
 /* Header above map */
 .map-header {
