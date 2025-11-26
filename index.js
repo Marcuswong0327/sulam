@@ -41,6 +41,33 @@ let markerClusterGroupMobile = null;
 let poiMarkers = []; // { id, desktop, mobile }
 let zonePolygons = []; // { id, desktop, mobile }
 
+// ---------------- USER TRACKING ----------------
+const youIcon = L.icon({
+  iconUrl: 'you_icon.jpg',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
+});
+
+let youMarkerDesktop = null;
+let youMarkerMobile = null;
+
+const mapBoundsGPS = {
+  topLeft: { lat: 3.0000, lng: 101.5000 },   // adjust to your actual map latitude
+  bottomRight: { lat: 2.9600, lng: 101.5400 }    // adjust to your actual map longitude
+};
+
+function latLngToPixel(lat, lng) {
+  const { topLeft, bottomRight } = mapBoundsGPS;
+
+  // Latitude → Y (top-left is 0)
+  const y = ((lat - bottomRight.lat) / (topLeft.lat - bottomRight.lat)) * IMG_H;
+
+  // Longitude → X (left is 0)
+  const x = ((lng - topLeft.lng) / (bottomRight.lng - topLeft.lng)) * IMG_W;
+
+  return [y, x];
+}
+
 // ---------------- MODAL FUNCTIONS ----------------
 function showModal(data) {
   modalTitle.textContent = data.title || '';
@@ -268,10 +295,47 @@ poiSearchEl.addEventListener('input', () => {
   });
 });
 
+// ---------------- GPS TRACKING ----------------
+function trackUser() {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser");
+    return;
+  }
+
+  navigator.geolocation.watchPosition((position) => {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+
+    const coords = latLngToPixel(lat, lng); // convert GPS → map pixel
+
+    // Desktop
+    if (youMarkerDesktop) {
+      youMarkerDesktop.setLatLng(coords);
+    } else {
+      youMarkerDesktop = L.marker(coords, { icon: youIcon }).addTo(activeMapDesktop);
+    }
+
+    // Mobile
+    if (youMarkerMobile) {
+      youMarkerMobile.setLatLng(coords);
+    } else {
+      youMarkerMobile = L.marker(coords, { icon: youIcon }).addTo(activeMapMobile);
+    }
+
+  }, (err) => {
+    console.error("GPS error:", err);
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 1000
+  });
+}
+
 // ---------------- INIT ----------------
 window.addEventListener('DOMContentLoaded', () => {
   initMaps();
   startListeners();
+
+  trackUser(); // <-- start real-time GPS tracking
 
   const fitAllBtnTop = document.getElementById('fitAllBtnTop');
   fitAllBtnTop.addEventListener('click', () => {
