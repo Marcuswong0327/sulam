@@ -551,6 +551,23 @@ window.addEventListener('DOMContentLoaded', () => {
     activeMapDesktop.fitBounds([[0, 0], [IMG_H, IMG_W]]);
     activeMapMobile.fitBounds([[0, 0], [IMG_H, IMG_W]]);
   });
+  
+  const fitAllBtnSidebar = document.getElementById('fitAllBtn');
+  fitAllBtnSidebar.addEventListener('click', () => {
+    activeMapDesktop.fitBounds([[0, 0], [IMG_H, IMG_W]]);
+    activeMapMobile.fitBounds([[0, 0], [IMG_H, IMG_W]]);
+  });
+  
+  const copyMapLinkBtn = document.getElementById('copyMapLink');
+  copyMapLinkBtn.addEventListener('click', () => {
+    const url = location.origin + location.pathname;
+    navigator.clipboard.writeText(url).then(() => {
+      copyMapLinkBtn.textContent = 'Link copied';
+      setTimeout(() => {
+        copyMapLinkBtn.textContent = 'Copy map link';
+      }, 1400);
+    });
+  });
 
   // Intro popup logic
   const introPopup = document.getElementById('mapIntroPopup');
