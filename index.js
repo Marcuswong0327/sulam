@@ -25,6 +25,7 @@ const modalImage = document.getElementById('modalImage');
 const modalDesc = document.getElementById('modalDesc');
 const closeModalBtn = document.getElementById('closeModal');
 const modalShareBtn = document.getElementById('modalShare');
+const modalDirectionsBtn = document.getElementById('modalDirections');
 const selectedInfoEl = document.getElementById('selectedInfo');
 const poiSearchEl = document.getElementById('poiSearch');
 
@@ -221,6 +222,13 @@ modalShareBtn.addEventListener('click', () => {
     modalShareBtn.textContent = 'Link copied';
     setTimeout(() => modalShareBtn.textContent = 'Copy link', 1400);
   });
+});
+
+modalDirectionsBtn.addEventListener('click', () => {
+  if (!poiModal._current || !poiModal._current.coords) return;
+  const { lat, lng } = poiModal._current.coords;
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  window.open(googleMapsUrl, '_blank');
 });
 
 // ---------------- MAP INIT ----------------
