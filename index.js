@@ -3,18 +3,13 @@
 // ---------------- FIREBASE SETUP ----------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId, measurementId } from './config.js';
+import { googleMapURL } from "./config.js";
+import bwmMapImg from './assets/bwm_map3.jpg';
+import youIconImg from './assets/you_icon.jpg';
+import { topLeftLat, topLeftLng, bottomRightLat, bottomRightLng } from "./config.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA093rrUBlUG4tDnGUdyql0-c7m-E2DDHw",
-  authDomain: "sulam-project-map.firebaseapp.com",
-  projectId: "sulam-project-map",
-  storageBucket: "sulam-project-map.firebasestorage.app",
-  messagingSenderId: "402597128748",
-  appId: "1:402597128748:web:f73f4b44e44fcb55bfff89",
-  measurementId: "G-SDHPJ5G431"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
 
 // ---------------- UI REFERENCES ----------------
 const markerListEl = document.getElementById('markerList');
@@ -34,7 +29,7 @@ const recommendationBox = document.getElementById('recommendationBox');
 const recommendationList = document.getElementById('recommendationList');
 
 // ---------------- MAP CONFIG ----------------
-const IMAGE_FILENAME = "bwm_map3.jpg";
+const IMAGE_FILENAME = bwmMapImg;
 const IMG_W = 1530;
 const IMG_H = 1050;
 const bounds = [[0, 0], [IMG_H, IMG_W]];
@@ -48,7 +43,7 @@ let zonePolygons = []; // { id, desktop, mobile }
 
 // ---------------- USER TRACKING ----------------
 const youIcon = L.icon({
-  iconUrl: 'you_icon.jpg',
+  iconUrl: youIconImg,
   iconSize: [32, 32],
   iconAnchor: [16, 16]
 });
@@ -57,8 +52,8 @@ let youMarkerDesktop = null;
 let youMarkerMobile = null;
 
 const mapBoundsGPS = {
-  topLeft: { lat: 2.9817734396960933, lng: 101.5108517014077 },   // adjust to your actual map latitude
-  bottomRight: { lat: 2.981656921540031, lng: 101.51112863952406 }    // adjust to your actual map longitude
+  topLeft: { lat: topLeftLat, lng: topLeftLng },   // adjust to your actual map latitude
+  bottomRight: { lat: bottomRightLat, lng: bottomRightLng }    // adjust to your actual map longitude
 };
 
 function latLngToPixel(lat, lng) {
@@ -80,32 +75,14 @@ function distance(a, b) {
   return Math.sqrt(dy * dy + dx * dx);
 }
 
-function getAllPlaces() {
-  const pois = poiMarkers.map(p => ({
-    id: p.id,
-    title: p.data.title,
-    coords: p.desktop.getLatLng(),
-    type: 'poi'
-  }));
-
-  const zones = zonePolygons.map(z => {
-    const center = z.desktop.getBounds().getCenter();
-    return {
-      id: z.id,
-      title: z.data.title,
-      coords: center,
-      type: 'zone'
-    };
-  });
-
-  return [...pois, ...zones];
-}
 
 function showRecommendations(originCoords, excludeId) {
   if (!originCoords) {
     recommendationBox.classList.add('hidden');
     return;
   }
+
+
 
   // 1. Recompute all places fresh
   const allPlaces = [
@@ -227,7 +204,7 @@ modalShareBtn.addEventListener('click', () => {
 modalDirectionsBtn.addEventListener('click', () => {
   if (!poiModal._current || !poiModal._current.coords) return;
   const { lat, lng } = poiModal._current.coords;
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const googleMapsUrl = `${googleMapURL}${lat},${lng}`;
   window.open(googleMapsUrl, '_blank');
 });
 
@@ -559,13 +536,13 @@ window.addEventListener('DOMContentLoaded', () => {
     activeMapDesktop.fitBounds([[0, 0], [IMG_H, IMG_W]]);
     activeMapMobile.fitBounds([[0, 0], [IMG_H, IMG_W]]);
   });
-  
+
   const fitAllBtnSidebar = document.getElementById('fitAllBtn');
   fitAllBtnSidebar.addEventListener('click', () => {
     activeMapDesktop.fitBounds([[0, 0], [IMG_H, IMG_W]]);
     activeMapMobile.fitBounds([[0, 0], [IMG_H, IMG_W]]);
   });
-  
+
   const copyMapLinkBtn = document.getElementById('copyMapLink');
   copyMapLinkBtn.addEventListener('click', () => {
     const url = location.origin + location.pathname;
@@ -658,147 +635,3 @@ window.addEventListener('resize', () => {
   }
 });
 
-// ---------------- AI ASSISTANT (OpenRouter) ----------------
-const OPENROUTER_API_KEY = "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";
-
-async function fetchWikipediaSummary(title) {
-  // Hybrid AI using simple Wikipedia REST API for web data
-  try {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.extract || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-//AI models used sequentially (fallback if one fails)
-const MODELS = [
-  "mistralai/devstral-2512:free",
-  "nvidia/nemotron-3-nano-30b-a3b:free",
-  "xiaomi/mimo-v2-flash:free",
-  "z-ai/glm-4.5-air:free"
-];
-
-async function askAIDestination(question) {
-  const current = poiModal._current;
-  if (!current) return "Please select a POI or Zone first.";
-
-  const { title, desc, coords } = current;
-  const lat = coords?.lat;
-  const lng = coords?.lng;
-
-  // Fetch web data
-  const wikiSummary = (await fetchWikipediaSummary(title))?.slice(0, 800);
-
-  // Prepare webResults text
-  const webResults = wikiSummary
-    ? `Wikipedia summary:\n${wikiSummary}`
-    : "No external data found.";
-
-  for (const model of MODELS) {
-    try {
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": window.location.origin,
-            "X-Title": "KUL City Walk AI Assistant"
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: "system",
-                content: `
-You are a helpful travel assistant.
-Use the provided place information first.
-If it is insufficient, use general world knowledge.
-If external data is included, treat it as factual.
-Keep answers concise and visitor-friendly.
-Do not mention any coordinates or technical details.
-`
-              },
-              {
-                role: "user",
-                content: `
-Place name: ${title}
-
-Description from map database:
-${desc || "No description available."}
-
-Coordinates:
-Latitude: ${lat ?? "Unknown"}
-Longitude: ${lng ?? "Unknown"}
-
-External search results:
-${webResults}
-
-Question:
-${question}
-`
-              }
-            ],
-            max_tokens: 150
-          })
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.error) {
-        console.warn(`Model failed: ${model}`, data.error.message);
-        continue; // try next model
-      }
-
-      const content = data.choices?.[0]?.message?.content;
-      if (content && content.trim()) return content;
-
-      console.warn(`Empty response from model: ${model}`);
-      continue;
-    } catch (err) {
-      console.warn(`Request failed for model: ${model}`, err);
-    }
-  }
-  return "⚠️ AI is temporarily unavailable due to free model limits. Please try again in a moment.";
-}
-
-//js hook to wire AI Assistant button
-const aiAskBtn = document.getElementById("aiAskBtn");
-const aiAnswerEl = document.getElementById("aiAnswer");
-const aiQuestionEl = document.getElementById("aiQuestion");
-
-if (aiAskBtn) {
-  aiAskBtn.addEventListener("click", async () => {
-    const q = aiQuestionEl.value.trim();
-    if (!q) return;
-
-    // dot animation when generating response
-    let dots = 0;
-    aiAnswerEl.textContent = "🤖 Thinking";
-    const interval = setInterval(() => {
-      aiAnswerEl.textContent = "🤖 Thinking" + ".".repeat(dots % 4);
-      dots++;
-    }, 500);
-    
-    try {
-      const answer = await askAIDestination(q);
-      clearInterval(interval);
-      aiAnswerEl.textContent = answer;
-    } catch (err) {
-      clearInterval(interval);
-      aiAnswerEl.textContent = "⚠️ Failed to get response.";
-      console.error(err);
-    }
-  });
-
-  // Optional: submit on Enter key
-  aiQuestionEl.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") aiAskBtn.click();
-  });
-}
