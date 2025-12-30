@@ -1,5 +1,5 @@
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { app } from "./initializeFirebase.js";
 
 export const backToMapBtn = function backToMapBtn() {
     const backToMap = document.getElementById('backToMap');
@@ -10,13 +10,13 @@ export const backToMapBtn = function backToMapBtn() {
 
 export const signIn = function () {
     const auth = getAuth(app);
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-
     const login = document.getElementById('loginBtn');
 
     login.addEventListener("click", function (event) {
-        event.preventDefault()
+        event.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
         signInWithEmailAndPassword(auth, email, password)
             .then(() => {
@@ -31,15 +31,14 @@ export const signIn = function () {
 };
 
 export const signUp = function () {
-    //inputs
     const auth = getAuth(app);
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
-
     const submit = document.getElementById('submit');
 
     submit.addEventListener("click", function (event) {
         event.preventDefault();
+
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
 
         createUserWithEmailAndPassword(auth, email, password)
             .then(() => {

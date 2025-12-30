@@ -3,13 +3,14 @@
 // ---------------- FIREBASE SETUP ----------------
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-import { googleMapURL } from "./config.js";
-import bwmMapImg from './assets/bwm_map3.jpg';
-import youIconImg from './assets/you_icon.jpg';
-import { topLeftLat, topLeftLng, bottomRightLat, bottomRightLng } from "./config.js";
-import { firebaseInitializer } from "./helper/initializeFirebase.js";
+import { googleMapURL, IMG_W, IMG_H } from "./config.js";
+import { firebaseInitializer, db } from "./helper/initializeFirebase.js";
 import { tracking } from "./helper/gpsTracking.js";
-import { IMG_W, IMG_H } from "./config.js";
+
+// Static asset URLs (no bundler on Vercel)
+const bwmMapImg = "assets/bwm_map3.jpg";
+const youIconImg = "assets/you_icon.jpg";
+
 firebaseInitializer();
 
 // ---------------- UI REFERENCES ----------------
@@ -32,8 +33,9 @@ const recommendationList = document.getElementById('recommendationList');
 // ---------------- MAP CONFIG ----------------
 const bounds = [[0, 0], [IMG_H, IMG_W]];
 
-let activeMapDesktop = null;
-let activeMapMobile = null;
+// Exported so helper modules (e.g. tracking) can receive references if needed
+export let activeMapDesktop = null;
+export let activeMapMobile = null;
 let markerClusterGroupDesktop = null;
 let markerClusterGroupMobile = null;
 let poiMarkers = []; // { id, desktop, mobile }
@@ -513,7 +515,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initMaps();
   startListeners();
 
-  tracking(); // <-- start real-time GPS tracking
+  // start real-time GPS tracking (pass map instances explicitly)
+  tracking(activeMapDesktop, activeMapMobile);
 
   const fitAllBtnTop = document.getElementById('fitAllBtnTop');
   fitAllBtnTop.addEventListener('click', () => {

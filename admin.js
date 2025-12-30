@@ -2,8 +2,7 @@
 
 // ---------------- FIREBASE SETUP ----------------
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { firebaseInitializer } from "./helper/initializeFirebase";
-import bwmMapImg from './assets/bwm_map3.jpg';
+import { firebaseInitializer, app, db } from "./helper/initializeFirebase.js";
 
 import {
   collection,
@@ -41,7 +40,7 @@ const cancelGlobalBtn = document.getElementById('cancelGlobalBtn');
 const statusMsg = document.getElementById('statusMsg');
 
 // ---------------- MAP ----------------
-const IMAGE_FILENAME = bwmMapImg;
+const IMAGE_FILENAME = "assets/bwm_map3.jpg";
 const IMG_W = 1530;
 const IMG_H = 1050;
 const bounds = [[0, 0], [IMG_H, IMG_W]];
