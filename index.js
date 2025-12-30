@@ -6,7 +6,7 @@ import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.
 import { googleMapURL, IMG_W, IMG_H } from "./config.js";
 import { firebaseInitializer, db } from "./helper/initializeFirebase.js";
 import { tracking } from "./helper/gpsTracking.js";
-
+import { setupAIAssistant } from "./AI_assistant.js";
 // Static asset URLs (no bundler on Vercel)
 const bwmMapImg = "assets/bwm_map3.jpg";
 const youIconImg = "assets/you_icon.jpg";
@@ -517,6 +517,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // start real-time GPS tracking (pass map instances explicitly)
   tracking(activeMapDesktop, activeMapMobile);
+
+  setupAIAssistant(() => poiModal._current);
 
   const fitAllBtnTop = document.getElementById('fitAllBtnTop');
   fitAllBtnTop.addEventListener('click', () => {

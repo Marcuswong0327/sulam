@@ -1,41 +1,4 @@
-import { openRouterAPIKey, openRouterEndPointURL, systemRequirement } from "./config";
-import { wikipediaURL } from "./config";
-import { MODELS } from "./config";
-
-//js hook to wire AI Assistant button
-const aiAskBtn = document.getElementById("aiAskBtn");
-const aiAnswerEl = document.getElementById("aiAnswer");
-const aiQuestionEl = document.getElementById("aiQuestion");
-
-if (aiAskBtn) {
-    aiAskBtn.addEventListener("click", async () => {
-        const q = aiQuestionEl.value.trim();
-        if (!q) return;
-
-        // dot animation when generating response
-        let dots = 0;
-        aiAnswerEl.textContent = "🤖 Thinking";
-        const interval = setInterval(() => {
-            aiAnswerEl.textContent = "🤖 Thinking" + ".".repeat(dots % 4);
-            dots++;
-        }, 500);
-
-        try {
-            const answer = await askAIDestination(q);
-            clearInterval(interval);
-            aiAnswerEl.textContent = answer;
-        } catch (err) {
-            clearInterval(interval);
-            aiAnswerEl.textContent = "⚠️ Failed to get response.";
-            console.error(err);
-        }
-    });
-
-    // Optional: submit on Enter key
-    aiQuestionEl.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") aiAskBtn.click();
-    });
-}
+import { openRouterAPIKey, openRouterEndPointURL, systemRequirement, wikipediaURL, MODELS } from "./config.js";
 
 const OPENROUTER_API_KEY = openRouterAPIKey;
 
@@ -53,8 +16,7 @@ async function fetchWikipediaSummary(title) {
 }
 
 
-async function askAIDestination(question) {
-    const current = poiModal._current;
+async function askAIDestination(question, current) {
     if (!current) return "Please select a POI or Zone first.";
 
     const { title, desc, coords } = current;
@@ -132,4 +94,46 @@ ${question}
     return "⚠️ AI is temporarily unavailable due to free model limits. Please try again in a moment.";
 }
 
+/**
+ * Wire the AI assistant UI.
+ * The caller provides a function that returns the current selected POI/zone
+ * (e.g. () => poiModal._current from index.js).
+ */
+export function setupAIAssistant(getCurrentSelection) {
+    const aiAskBtn = document.getElementById("aiAskBtn");
+    const aiAnswerEl = document.getElementById("aiAnswer");
+    const aiQuestionEl = document.getElementById("aiQuestion");
+
+    if (!aiAskBtn || !aiAnswerEl || !aiQuestionEl) return;
+
+    aiAskBtn.addEventListener("click", async () => {
+        const q = aiQuestionEl.value.trim();
+        if (!q) return;
+
+        const current = typeof getCurrentSelection === "function" ? getCurrentSelection() : null;
+
+        // dot animation when generating response
+        let dots = 0;
+        aiAnswerEl.textContent = "🤖 Thinking";
+        const interval = setInterval(() => {
+            aiAnswerEl.textContent = "🤖 Thinking" + ".".repeat(dots % 4);
+            dots++;
+        }, 500);
+
+        try {
+            const answer = await askAIDestination(q, current);
+            clearInterval(interval);
+            aiAnswerEl.textContent = answer;
+        } catch (err) {
+            clearInterval(interval);
+            aiAnswerEl.textContent = "⚠️ Failed to get response.";
+            console.error(err);
+        }
+    });
+
+    // Optional: submit on Enter key
+    aiQuestionEl.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") aiAskBtn.click();
+    });
+}
 
