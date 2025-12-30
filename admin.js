@@ -168,13 +168,21 @@ actionSelect.addEventListener('change', () => {
     setFormEnabled(true);
   } else if (actionSelect.value === 'edit') {
     // Edit: show existing picker + form + confirm
-    container();
-    if (typeSelect.value) loadExisting(typeSelect.value);
+    if (typeSelect.value) {
+      existingContainer.classList.remove('hidden');
+      formContainer.classList.remove('hidden');
+      confirmArea.classList.remove('hidden');
+      loadExisting(typeSelect.value);
+    }
     setFormEnabled(true);
   } else if (actionSelect.value === 'remove') {
-    // Remove: show existing picker + confirm, disable editing
-    container();
-    if (typeSelect.value) loadExisting(typeSelect.value);
+    // Remove: show existing picker + form (read-only) + confirm
+    if (typeSelect.value) {
+      existingContainer.classList.remove('hidden');
+      formContainer.classList.remove('hidden');
+      confirmArea.classList.remove('hidden');
+      loadExisting(typeSelect.value);
+    }
     setFormEnabled(false);
   }
 
@@ -183,8 +191,11 @@ actionSelect.addEventListener('change', () => {
 
 typeSelect.addEventListener('change', async () => {
   polygonCoords = [];
-  // when type changes and action is edit/remove, reload existing
+  // when type changes and action is edit/remove, reload existing and show form
   if (actionSelect.value === 'edit' || actionSelect.value === 'remove') {
+    existingContainer.classList.remove('hidden');
+    formContainer.classList.remove('hidden');
+    confirmArea.classList.remove('hidden');
     await loadExisting(typeSelect.value);
   }
   // show/hide coords section depending on type
@@ -193,8 +204,16 @@ typeSelect.addEventListener('change', async () => {
 });
 
 existingSelect.addEventListener('change', async () => {
-  if (!existingSelect.value) return;
+  if (!existingSelect.value) {
+    // Clear form when no item selected
+    resetForm();
+    return;
+  }
   if (actionSelect.value === 'edit' || actionSelect.value === 'remove') {
+    // Ensure form container is visible when item is selected
+    formContainer.classList.remove('hidden');
+    confirmArea.classList.remove('hidden');
+
     const colRef = collection(db, typeSelect.value === 'poi' ? 'pois' : 'zones');
     const snap = await getDocs(colRef);
     const dataDoc = snap.docs.find(d => d.id === existingSelect.value);
@@ -218,12 +237,15 @@ existingSelect.addEventListener('change', async () => {
       yInput.value = lng ?? '';
       if (currentMarker) { try { map.removeLayer(currentMarker); } catch (e) { } currentMarker = null; }
       if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
-        currentMarker = L.marker([Number(lat), Number(lng)], { draggable: true }).addTo(map)
-          .on('drag', ev => {
+        const draggable = actionSelect.value === 'edit';
+        currentMarker = L.marker([Number(lat), Number(lng)], { draggable: draggable }).addTo(map);
+        if (draggable) {
+          currentMarker.on('drag', ev => {
             const pos = ev.target.getLatLng();
             xInput.value = Math.round(pos.lat);
             yInput.value = Math.round(pos.lng);
           });
+        }
         map.setView([Number(lat), Number(lng)], Math.max(map.getZoom(), map.getMinZoom()));
       }
       coordsListEl.classList.add('hidden');
@@ -231,7 +253,7 @@ existingSelect.addEventListener('change', async () => {
       polygonCoords = (data.coordinates || []).map(c => [c.x, c.y]);
       updatePolygon();
     }
-    // If remove action, keep form disabled
+    // If remove action, keep form disabled (read-only view)
     setFormEnabled(actionSelect.value !== 'remove');
   }
 });

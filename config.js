@@ -6,16 +6,16 @@ export const messagingSenderId = "402597128748";
 export const appId = "1:402597128748:web:f73f4b44e44fcb55bfff89";
 export const measurementId = "G-SDHPJ5G431";
 
-// export const topLeftLat = 2.9817734396960933;
-// export const topLeftLng = 101.5108517014077;
-// export const bottomRightLat = 2.981656921540031;
-// export const bottomRightLng = 101.51112863952406;
+export const topLeftLat = 2.9817734396960933;
+export const topLeftLng = 101.5108517014077;
+export const bottomRightLat = 2.981656921540031;
+export const bottomRightLng = 101.51112863952406;
 
-// Area: Li Villas
-export const topLeftLat = 3.126850;
-export const topLeftLng = 101.639400;
-export const bottomRightLat = 3.124950;
-export const bottomRightLng = 101.641700;
+// // Area: Li Villas
+// export const topLeftLat = 3.126850;
+// export const topLeftLng = 101.639400;
+// export const bottomRightLat = 3.124950;
+// export const bottomRightLng = 101.641700;
 
 export const IMG_W = 1530;
 export const IMG_H = 1050;
