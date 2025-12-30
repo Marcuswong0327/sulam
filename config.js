@@ -10,6 +10,8 @@ export const topLeftLat = 2.9817734396960933;
 export const topLeftLng = 101.5108517014077;
 export const bottomRightLat = 2.981656921540031;
 export const bottomRightLng = 101.51112863952406;
+export const IMG_W = 1530;
+export const IMG_H = 1050;
 
 export const googleMapURL = `https://www.google.com/maps/dir/?api=1&destination=`;
 

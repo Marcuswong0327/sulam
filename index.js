@@ -1,15 +1,16 @@
 // index.js (Firestore dynamic POIs & Zones - desktop + mobile)
 
 // ---------------- FIREBASE SETUP ----------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-import { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId, measurementId } from './config.js';
+import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
 import { googleMapURL } from "./config.js";
 import bwmMapImg from './assets/bwm_map3.jpg';
 import youIconImg from './assets/you_icon.jpg';
 import { topLeftLat, topLeftLng, bottomRightLat, bottomRightLng } from "./config.js";
-
-
+import { firebaseInitializer } from "./helper/initializeFirebase.js";
+import { tracking } from "./helper/gpsTracking.js";
+import { IMG_W, IMG_H } from "./config.js";
+firebaseInitializer();
 
 // ---------------- UI REFERENCES ----------------
 const markerListEl = document.getElementById('markerList');
@@ -29,9 +30,6 @@ const recommendationBox = document.getElementById('recommendationBox');
 const recommendationList = document.getElementById('recommendationList');
 
 // ---------------- MAP CONFIG ----------------
-const IMAGE_FILENAME = bwmMapImg;
-const IMG_W = 1530;
-const IMG_H = 1050;
 const bounds = [[0, 0], [IMG_H, IMG_W]];
 
 let activeMapDesktop = null;
@@ -51,22 +49,8 @@ const youIcon = L.icon({
 let youMarkerDesktop = null;
 let youMarkerMobile = null;
 
-const mapBoundsGPS = {
-  topLeft: { lat: topLeftLat, lng: topLeftLng },   // adjust to your actual map latitude
-  bottomRight: { lat: bottomRightLat, lng: bottomRightLng }    // adjust to your actual map longitude
-};
 
-function latLngToPixel(lat, lng) {
-  const { topLeft, bottomRight } = mapBoundsGPS;
 
-  // Latitude → Y (top-left is 0)
-  const y = ((lat - bottomRight.lat) / (topLeft.lat - bottomRight.lat)) * IMG_H;
-
-  // Longitude → X (left is 0)
-  const x = ((lng - topLeft.lng) / (bottomRight.lng - topLeft.lng)) * IMG_W;
-
-  return [y, x];
-}
 
 // ---------------- RECOMMENDATION LOGIC ----------------
 function distance(a, b) {
@@ -149,7 +133,7 @@ function showRecommendations(originCoords, excludeId) {
 }
 
 // ---------------- MODAL FUNCTIONS ----------------
-function showModal(data) {
+export const showModal = function showModal(data) {
   // Normalize coords: always {lat, lng}
   let coords = data.coords;
   if (Array.isArray(coords)) {
@@ -212,7 +196,7 @@ modalDirectionsBtn.addEventListener('click', () => {
 function initMaps() {
   // Desktop
   activeMapDesktop = L.map('map-desktop', { crs: L.CRS.Simple, minZoom: -1, maxZoom: 3, zoomControl: true, attributionControl: false, maxBounds: bounds, maxBoundsViscosity: 0.8 });
-  L.imageOverlay(IMAGE_FILENAME, bounds).addTo(activeMapDesktop);
+  L.imageOverlay(bwmMapImg, bounds).addTo(activeMapDesktop);
   activeMapDesktop.fitBounds(bounds);
   markerClusterGroupDesktop = L.markerClusterGroup();
   activeMapDesktop.addLayer(markerClusterGroupDesktop);
@@ -227,7 +211,7 @@ function initMaps() {
     maxBounds: bounds,        // <-- restrict map to image bounds
     maxBoundsViscosity: 0.8   // <-- smooth bounce-back effect
   });
-  L.imageOverlay(IMAGE_FILENAME, bounds).addTo(activeMapMobile);
+  L.imageOverlay(bwmMapImg, bounds).addTo(activeMapMobile);
   activeMapMobile.fitBounds(bounds);
   markerClusterGroupMobile = L.markerClusterGroup();
   activeMapMobile.addLayer(markerClusterGroupMobile);
@@ -490,46 +474,46 @@ poiSearchEl.addEventListener('input', () => {
 });
 
 // ---------------- GPS TRACKING ----------------
-function trackUser() {
-  if (!navigator.geolocation) {
-    alert("Geolocation is not supported by your browser");
-    return;
-  }
+// function trackUser() {
+//   if (!navigator.geolocation) {
+//     alert("Geolocation is not supported by your browser");
+//     return;
+//   }
 
-  navigator.geolocation.watchPosition((position) => {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
+//   navigator.geolocation.watchPosition((position) => {
+//     const lat = position.coords.latitude;
+//     const lng = position.coords.longitude;
 
-    const coords = latLngToPixel(lat, lng); // convert GPS → map pixel
+//     const coords = latLngToPixel(lat, lng); // convert GPS → map pixel
 
-    // Desktop
-    if (youMarkerDesktop) {
-      youMarkerDesktop.setLatLng(coords);
-    } else {
-      youMarkerDesktop = L.marker(coords, { icon: youIcon }).addTo(activeMapDesktop);
-    }
+//     // Desktop
+//     if (youMarkerDesktop) {
+//       youMarkerDesktop.setLatLng(coords);
+//     } else {
+//       youMarkerDesktop = L.marker(coords, { icon: youIcon }).addTo(activeMapDesktop);
+//     }
 
-    // Mobile
-    if (youMarkerMobile) {
-      youMarkerMobile.setLatLng(coords);
-    } else {
-      youMarkerMobile = L.marker(coords, { icon: youIcon }).addTo(activeMapMobile);
-    }
+//     // Mobile
+//     if (youMarkerMobile) {
+//       youMarkerMobile.setLatLng(coords);
+//     } else {
+//       youMarkerMobile = L.marker(coords, { icon: youIcon }).addTo(activeMapMobile);
+//     }
 
-  }, (err) => {
-    console.error("GPS error:", err);
-  }, {
-    enableHighAccuracy: true,
-    maximumAge: 1000
-  });
-}
+//   }, (err) => {
+//     console.error("GPS error:", err);
+//   }, {
+//     enableHighAccuracy: true,
+//     maximumAge: 1000
+//   });
+// }
 
 // ---------------- INIT ----------------
 window.addEventListener('DOMContentLoaded', () => {
   initMaps();
   startListeners();
 
-  trackUser(); // <-- start real-time GPS tracking
+  tracking(); // <-- start real-time GPS tracking
 
   const fitAllBtnTop = document.getElementById('fitAllBtnTop');
   fitAllBtnTop.addEventListener('click', () => {

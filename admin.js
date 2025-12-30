@@ -1,31 +1,21 @@
 // admin.js — complete file with requested fixes applied
 
 // ---------------- FIREBASE SETUP ----------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { firebaseInitializer } from "./helper/initializeFirebase";
+import bwmMapImg from './assets/bwm_map3.jpg';
 
 import {
-  getFirestore,
   collection,
   doc,
   getDocs,
-  setDoc,
   updateDoc,
   deleteDoc,
   addDoc
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA093rrUBlUG4tDnGUdyql0-c7m-E2DDHw",
-  authDomain: "sulam-project-map.firebaseapp.com",
-  projectId: "sulam-project-map",
-  storageBucket: "sulam-project-map.firebasestorage.app",
-  messagingSenderId: "402597128748",
-  appId: "1:402597128748:web:f73f4b44e44fcb55bfff89",
-  measurementId: "G-SDHPJ5G431"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
+firebaseInitializer();
 const auth = getAuth(app);
 
 // ---------------- UI REFERENCES ----------------
@@ -51,7 +41,7 @@ const cancelGlobalBtn = document.getElementById('cancelGlobalBtn');
 const statusMsg = document.getElementById('statusMsg');
 
 // ---------------- MAP ----------------
-const IMAGE_FILENAME = "bwm_map3.jpg";
+const IMAGE_FILENAME = bwmMapImg;
 const IMG_W = 1530;
 const IMG_H = 1050;
 const bounds = [[0, 0], [IMG_H, IMG_W]];
@@ -161,11 +151,15 @@ function updateResetBtnVisibility() {
 }
 
 // ---------------- EVENT LISTENERS ----------------
-actionSelect.addEventListener('change', () => {
-  resetForm();
+const container = function () {
   existingContainer.classList.add('hidden');
   formContainer.classList.add('hidden');
   confirmArea.classList.add('hidden');
+};
+
+actionSelect.addEventListener('change', () => {
+  resetForm();
+  container();
   polygonCoords = [];
 
   if (actionSelect.value === 'add') {
@@ -175,16 +169,12 @@ actionSelect.addEventListener('change', () => {
     setFormEnabled(true);
   } else if (actionSelect.value === 'edit') {
     // Edit: show existing picker + form + confirm
-    existingContainer.classList.remove('hidden');
-    formContainer.classList.remove('hidden');
-    confirmArea.classList.remove('hidden');
+    container();
     if (typeSelect.value) loadExisting(typeSelect.value);
     setFormEnabled(true);
   } else if (actionSelect.value === 'remove') {
     // Remove: show existing picker + confirm, disable editing
-    existingContainer.classList.remove('hidden');
-    formContainer.classList.remove('hidden'); // show preview/info
-    confirmArea.classList.remove('hidden');
+    container();
     if (typeSelect.value) loadExisting(typeSelect.value);
     setFormEnabled(false);
   }
@@ -267,10 +257,10 @@ if (resetCoordsBtn) {
 if (imgFileInput) {
   imgFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (!file) { 
-      previewImage.style.display = 'none'; 
-      previewDataURL = ''; 
-      return; 
+    if (!file) {
+      previewImage.style.display = 'none';
+      previewDataURL = '';
+      return;
     }
 
     try {
@@ -394,9 +384,7 @@ if (cancelGlobalBtn) {
   cancelGlobalBtn.addEventListener('click', () => {
     resetForm();
     existingSelect.innerHTML = '';
-    existingContainer.classList.add('hidden');
-    formContainer.classList.add('hidden');
-    confirmArea.classList.add('hidden');
+    container();
   });
 }
 
