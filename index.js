@@ -7,6 +7,7 @@ import { googleMapURL, IMG_W, IMG_H } from "./config.js";
 import { firebaseInitializer, db } from "./helper/initializeFirebase.js";
 import { tracking } from "./helper/gpsTracking.js";
 import { setupAIAssistant } from "./AI_assistant.js";
+
 // Static asset URLs (no bundler on Vercel)
 const bwmMapImg = "assets/bwm_map3.jpg";
 const youIconImg = "assets/you_icon.jpg";
@@ -364,11 +365,14 @@ function populatePOIsSidebar(docs) {
       });
     });
 
-    // SHARE button
+    // SHARE button - copy Google Maps URL for this POI
     li.querySelector('[data-action="share"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      const hash = `#poi=${encodeURIComponent(doc.id)}`;
-      navigator.clipboard.writeText(location.origin + location.pathname + hash);
+      const markerObj = poiMarkers.find(m => m.id === doc.id);
+      if (!markerObj) return;
+      const { lat, lng } = markerObj.desktop.getLatLng();
+      const googleMapsUrl = `${googleMapURL}${lat},${lng}`;
+      navigator.clipboard.writeText(googleMapsUrl);
     });
 
     // Click anywhere on the list item
@@ -434,10 +438,14 @@ function populateZonesSidebar(docs) {
       });
     });
 
-    // SHARE button
-    li.querySelector('[data-action="share"]').addEventListener('click', () => {
-      const hash = `#poi=${encodeURIComponent(doc.id)}`;
-      navigator.clipboard.writeText(location.origin + location.pathname + hash);
+    // SHARE button - copy Google Maps URL for this Zone (center point)
+    li.querySelector('[data-action="share"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const polyObj = zonePolygons.find(z => z.id === doc.id);
+      if (!polyObj) return;
+      const center = polyObj.desktop.getBounds().getCenter();
+      const googleMapsUrl = `${googleMapURL}${center.lat},${center.lng}`;
+      navigator.clipboard.writeText(googleMapsUrl);
     });
 
     // Click anywhere on the list item
@@ -518,6 +526,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // start real-time GPS tracking (pass map instances explicitly)
   tracking(activeMapDesktop, activeMapMobile);
 
+  // wire AI assistant (uses current modal selection)
   setupAIAssistant(() => poiModal._current);
 
   const fitAllBtnTop = document.getElementById('fitAllBtnTop');
