@@ -137,7 +137,7 @@ function showRecommendations(originCoords, excludeId) {
 
 // ---------------- MODAL FUNCTIONS ----------------
 export const showModal = function showModal(data) {
-  // Normalize coords: always {lat, lng}
+  // Normalize coords: always {lat, lng} (these are pixel coordinates for map display)
   let coords = data.coords;
   if (Array.isArray(coords)) {
     coords = { lat: coords[0], lng: coords[1] };
@@ -149,14 +149,14 @@ export const showModal = function showModal(data) {
   modalImage.alt = data.title || 'POI image';
   modalDesc.textContent = data.desc || '';
   poiModal.setAttribute('aria-hidden', 'false');
-  poiModal._current = { ...data, coords };
+  poiModal._current = { ...data, coords, realWorldCoords: data.realWorldCoords };
   selectedInfoEl.textContent = data.title || '';
 
-  // Center maps
+  // Center maps (use pixel coordinates)
   activeMapDesktop.setView([coords.lat, coords.lng], Math.max(activeMapDesktop.getZoom(), activeMapDesktop.getMinZoom()));
   activeMapMobile.setView([coords.lat, coords.lng], Math.max(activeMapMobile.getZoom(), activeMapMobile.getMinZoom()));
 
-  // Show fresh recommendations
+  // Show fresh recommendations (use pixel coordinates for distance calculation)
   showRecommendations(coords, data.id);
 
   // Reset AI I/O
@@ -164,6 +164,19 @@ export const showModal = function showModal(data) {
   const aiQuestionEl = document.getElementById("aiQuestion");
   if (aiAnswerEl) aiAnswerEl.textContent = "";
   if (aiQuestionEl) aiQuestionEl.value = "";
+}
+
+// Helper function to get coordinates for Google Maps (real-world if available, else pixel)
+function getGoogleMapsCoords(data) {
+  if (data.realWorldCoords?.lat != null && data.realWorldCoords?.lng != null) {
+    return { lat: data.realWorldCoords.lat, lng: data.realWorldCoords.lng };
+  }
+  // Fallback to pixel coordinates
+  let coords = data.coords;
+  if (Array.isArray(coords)) {
+    coords = { lat: coords[0], lng: coords[1] };
+  }
+  return coords;
 }
 
 function hideModal() {
@@ -189,9 +202,10 @@ modalShareBtn.addEventListener('click', () => {
 });
 
 modalDirectionsBtn.addEventListener('click', () => {
-  if (!poiModal._current || !poiModal._current.coords) return;
-  const { lat, lng } = poiModal._current.coords;
-  const googleMapsUrl = `${googleMapURL}${lat},${lng}`;
+  if (!poiModal._current) return;
+  const coords = getGoogleMapsCoords(poiModal._current);
+  if (!coords || coords.lat == null || coords.lng == null) return;
+  const googleMapsUrl = `${googleMapURL}${coords.lat},${coords.lng}`;
   window.open(googleMapsUrl, '_blank');
 });
 
@@ -240,24 +254,21 @@ function startListeners() {
       const lng = Number(d.coords?.y);
       if (isNaN(lat) || isNaN(lng)) return;
 
+      const modalData = {
+        id: doc.id,
+        title: d.title,
+        desc: d.desc,
+        img: d.img,
+        coords: [lat, lng],
+        realWorldCoords: d.realWorldCoords || null
+      };
+
       const markerDesktop = L.marker([lat, lng])
-        .on('click', () => showModal({
-          id: doc.id,
-          title: d.title,
-          desc: d.desc,
-          img: d.img,
-          coords: [lat, lng]
-        }));
+        .on('click', () => showModal(modalData));
 
 
       const markerMobile = L.marker([lat, lng])
-        .on('click', () => showModal({
-          id: doc.id,
-          title: d.title,
-          desc: d.desc,
-          img: d.img,
-          coords: [lat, lng]
-        }));
+        .on('click', () => showModal(modalData));
 
 
       // Add markers straight to maps (NO CLUSTERING)
@@ -288,26 +299,22 @@ function startListeners() {
     snapshot.forEach(doc => {
       const d = doc.data();
       const coords = d.coordinates.map(c => [c.x, c.y]); // Leaflet uses [lat, lng] = [y, x]
+      const tempPoly = L.polygon(coords);
+      const center = tempPoly.getBounds().getCenter();
+      const modalData = {
+        id: doc.id,
+        title: d.title,
+        desc: d.desc,
+        img: d.img,
+        coords: [center.lat, center.lng],
+        realWorldCoords: d.realWorldCoords || null
+      };
       const polyDesktop = L.polygon(coords, { color: '#1e6091', fillOpacity: 0.28, weight: 2 }).on('click', () => {
-        const center = polyDesktop.getBounds().getCenter();
-        showModal({
-          id: doc.id,
-          title: d.title,
-          desc: d.desc,
-          img: d.img,
-          coords: [center.lat, center.lng]
-        });
+        showModal(modalData);
       });
 
       const polyMobile = L.polygon(coords, { color: '#1e6091', fillOpacity: 0.28, weight: 2 }).on('click', () => {
-        const center = polyDesktop.getBounds().getCenter();
-        showModal({
-          id: doc.id,
-          title: d.title,
-          desc: d.desc,
-          img: d.img,
-          coords: [center.lat, center.lng]
-        });
+        showModal(modalData);
       });
 
 
@@ -361,7 +368,8 @@ function populatePOIsSidebar(docs) {
         title: d.title,
         desc: d.desc,
         img: d.img,
-        coords: [latlngDesktop.lat, latlngDesktop.lng]
+        coords: [latlngDesktop.lat, latlngDesktop.lng],
+        realWorldCoords: d.realWorldCoords || null
       });
     });
 
@@ -370,8 +378,8 @@ function populatePOIsSidebar(docs) {
       e.stopPropagation();
       const markerObj = poiMarkers.find(m => m.id === doc.id);
       if (!markerObj) return;
-      const { lat, lng } = markerObj.desktop.getLatLng();
-      const googleMapsUrl = `${googleMapURL}${lat},${lng}`;
+      const coords = getGoogleMapsCoords({ coords: markerObj.desktop.getLatLng(), realWorldCoords: markerObj.data.realWorldCoords });
+      const googleMapsUrl = `${googleMapURL}${coords.lat},${coords.lng}`;
       navigator.clipboard.writeText(googleMapsUrl);
     });
 
@@ -391,7 +399,8 @@ function populatePOIsSidebar(docs) {
         title: d.title,
         desc: d.desc,
         img: d.img,
-        coords: [latlngDesktop.lat, latlngDesktop.lng]
+        coords: [latlngDesktop.lat, latlngDesktop.lng],
+        realWorldCoords: d.realWorldCoords || null
       });
     });
   });
@@ -434,7 +443,8 @@ function populateZonesSidebar(docs) {
         title: d.title,
         desc: d.desc,
         img: d.img,
-        coords: [center.lat, center.lng]
+        coords: [center.lat, center.lng],
+        realWorldCoords: d.realWorldCoords || null
       });
     });
 
@@ -444,7 +454,8 @@ function populateZonesSidebar(docs) {
       const polyObj = zonePolygons.find(z => z.id === doc.id);
       if (!polyObj) return;
       const center = polyObj.desktop.getBounds().getCenter();
-      const googleMapsUrl = `${googleMapURL}${center.lat},${center.lng}`;
+      const coords = getGoogleMapsCoords({ coords: center, realWorldCoords: polyObj.data.realWorldCoords });
+      const googleMapsUrl = `${googleMapURL}${coords.lat},${coords.lng}`;
       navigator.clipboard.writeText(googleMapsUrl);
     });
 
@@ -463,7 +474,8 @@ function populateZonesSidebar(docs) {
         title: d.title,
         desc: d.desc,
         img: d.img,
-        coords: [center.lat, center.lng]
+        coords: [center.lat, center.lng],
+        realWorldCoords: d.realWorldCoords || null
       });
     });
   });
