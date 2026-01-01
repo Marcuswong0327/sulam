@@ -29,6 +29,8 @@ const imgFileInput = document.getElementById('poiImage');
 const previewImage = document.getElementById('previewImage');
 const xInput = document.getElementById('xInput');
 const yInput = document.getElementById('yInput');
+const realWorldLatInput = document.getElementById('realWorldLatInput');
+const realWorldLngInput = document.getElementById('realWorldLngInput');
 const coordsListEl = document.getElementById('coords-list');
 const logoutBtn = document.getElementById('logoutBtn');
 
@@ -129,7 +131,7 @@ async function loadExisting(type) {
 // ---------------- HELPERS ----------------
 function setFormEnabled(enabled) {
   // enabled = true -> allow editing; false -> disable inputs (used for "remove")
-  [titleInput, descInput, imgFileInput, xInput, yInput].forEach(el => {
+  [titleInput, descInput, imgFileInput, xInput, yInput, realWorldLatInput, realWorldLngInput].forEach(el => {
     el.disabled = !enabled;
     el.classList.toggle('muted', !enabled);
   });
@@ -235,6 +237,11 @@ existingSelect.addEventListener('change', async () => {
       const lng = data.coords?.y;
       xInput.value = lat ?? '';
       yInput.value = lng ?? '';
+
+      // Load real-world coordinates
+      realWorldLatInput.value = data.realWorldCoords?.lat ?? '';
+      realWorldLngInput.value = data.realWorldCoords?.lng ?? '';
+
       if (currentMarker) { try { map.removeLayer(currentMarker); } catch (e) { } currentMarker = null; }
       if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
         const draggable = actionSelect.value === 'edit';
@@ -364,7 +371,17 @@ if (confirmGlobalBtn) {
           desc: descInput.value,
           img: previewDataURL || ''
         };
-        if (typeSelect.value === 'poi') data.coords = { x: Number(xInput.value || 0), y: Number(yInput.value || 0) };
+        if (typeSelect.value === 'poi') {
+          data.coords = { x: Number(xInput.value || 0), y: Number(yInput.value || 0) };
+          const realLat = realWorldLatInput.value.trim();
+          const realLng = realWorldLngInput.value.trim();
+          if (realLat || realLng) {
+            data.realWorldCoords = {
+              lat: realLat ? Number(realLat) : null,
+              lng: realLng ? Number(realLng) : null
+            };
+          }
+        }
         if (typeSelect.value === 'zone') data.coordinates = polygonCoords.map(c => ({ x: c[0], y: c[1] }));
         if (!confirm('Confirm adding new item?')) return;
         const newDocRef = await addDoc(colRef, data);
@@ -377,7 +394,20 @@ if (confirmGlobalBtn) {
           desc: descInput.value,
           img: previewDataURL || ''
         };
-        if (typeSelect.value === 'poi') data.coords = { x: Number(xInput.value || 0), y: Number(yInput.value || 0) };
+        if (typeSelect.value === 'poi') {
+          data.coords = { x: Number(xInput.value || 0), y: Number(yInput.value || 0) };
+          const realLat = realWorldLatInput.value.trim();
+          const realLng = realWorldLngInput.value.trim();
+          if (realLat || realLng) {
+            data.realWorldCoords = {
+              lat: realLat ? Number(realLat) : null,
+              lng: realLng ? Number(realLng) : null
+            };
+          } else {
+            // If fields are empty, remove realWorldCoords
+            data.realWorldCoords = null;
+          }
+        }
         if (typeSelect.value === 'zone') data.coordinates = polygonCoords.map(c => ({ x: c[0], y: c[1] }));
         if (!confirm('Confirm updating item?')) return;
         await updateDoc(docRef, data);
@@ -433,6 +463,8 @@ function resetForm() {
 
   xInput.value = '';
   yInput.value = '';
+  realWorldLatInput.value = '';
+  realWorldLngInput.value = '';
   polygonCoords = [];
   if (currentMarker) { try { map.removeLayer(currentMarker); } catch (e) { } currentMarker = null; }
   if (currentPolygon) { try { map.removeLayer(currentPolygon); } catch (e) { } currentPolygon = null; }
