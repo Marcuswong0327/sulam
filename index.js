@@ -433,7 +433,7 @@ function populateZonesSidebar(docs) {
     zoneListEl.appendChild(li);
 
     // GO button
-    li.querySelector('[data-action="goto"]').addEventListener('click', () => {[]
+    li.querySelector('[data-action="goto"]').addEventListener('click', () => {
       const polyObj = zonePolygons.find(z => z.id === doc.id);
       if (!polyObj) return;
 
